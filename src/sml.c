@@ -1,5 +1,6 @@
+#include "ast.h"
 #include "lexer.h"
-#include "token.h"
+#include "parser.h"
 
 static char *program = "function main() -> int {"
                        "    print(\"Hello, world!\");"
@@ -8,10 +9,8 @@ static char *program = "function main() -> int {"
 
 int main(int argc, char *argv[]) {
   Lexer lexer = Lexer_New(program);
-  Token token = Lexer_NextToken(&lexer);
-  while (token.type != TOKEN_EOF) {
-    Token_Inspect(&token);
-    token = Lexer_NextToken(&lexer);
-  }
+  Parser parser = Parser_New(lexer);
+  StmtBlock ast = Parse(&parser);
+  AST_Inspect(ast);
   return 0;
 }
