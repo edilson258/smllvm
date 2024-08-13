@@ -6,6 +6,7 @@
 #include <llvm-c/Core.h>
 #include <llvm-c/Types.h>
 
+#include "ast.h"
 #include "llvm_gen.h"
 #include "stdlib.h"
 #include "utils.h"
@@ -20,6 +21,7 @@ void llvm_emit_stmt_block(StmtBlock);
 void llvm_emit_stmt_function(StmtFnDecl);
 LLVMValueRef llvm_emit_stmt_expr(StmtExpr);
 LLVMValueRef llvm_emit_expr_call(ExprCall);
+LLVMValueRef llvm_emit_expr_binop(ExprBinOp);
 LLVMValueRef llvm_emit_expr_literal(ExprLiteral);
 
 LLVMModuleRef llvm_emit_module(AST ast, char *source_file) {
@@ -27,13 +29,11 @@ LLVMModuleRef llvm_emit_module(AST ast, char *source_file) {
   llvm_module = LLVMModuleCreateWithName("hello");
   llvm_context = LLVMContextCreate();
   llvm_builder = LLVMCreateBuilderInContext(llvm_context);
-
   LLVMSetSourceFileName(llvm_module, source_file, strlen(source_file));
 
   llvm_emit_stmt_block(ast);
 
   LLVMDisposeBuilder(llvm_builder);
-
   return llvm_module;
 }
 
@@ -83,6 +83,8 @@ LLVMValueRef llvm_emit_stmt_expr(StmtExpr expr) {
     return llvm_emit_expr_literal(expr.value.literal);
   case EXPR_CALL:
     return llvm_emit_expr_call(expr.value.call);
+  case EXPR_BINOP:
+    return llvm_emit_expr_binop(expr.value.binop);
   default:
     puts("Not supported expression\n");
     exit(1);
@@ -114,6 +116,20 @@ LLVMValueRef llvm_emit_expr_call(ExprCall call) {
 
   val = LLVMBuildCall2(llvm_builder, fn_type, val, args, call.args.argc, "");
   return val;
+}
+
+LLVMValueRef llvm_emit_expr_binop(ExprBinOp binop) {
+  LLVMValueRef llvm_lhs = llvm_emit_stmt_expr(*binop.lhs);
+  LLVMValueRef llvm_rhs = llvm_emit_stmt_expr(*binop.rhs);
+
+  LLVMValueRef llvm_binop;
+  switch (binop.op) {
+  case BINOP_PLUS:
+    llvm_binop = LLVMBuildAdd(llvm_builder, llvm_lhs, llvm_rhs, "");
+    break;
+  }
+
+  return llvm_binop;
 }
 
 LLVMValueRef llvm_emit_expr_literal(ExprLiteral literal) {

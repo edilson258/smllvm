@@ -21,6 +21,7 @@ typedef enum {
   TOKEN_LBRACE,
   TOKEN_RBRACE,
   TOKEN_SEMICOLON,
+  TOKEN_PLUS,
 
   // keywords
   TOKEN_RETURN,

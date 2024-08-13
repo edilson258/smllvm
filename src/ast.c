@@ -10,7 +10,9 @@ void print_tab(int x) {
   }
 }
 
+void inspect_expr(StmtExpr expr, int tab);
 void block_stmt_inspect(StmtBlock block, int tab);
+void inspect_expr_binop(ExprBinOp binop, int tab);
 
 void inspect_fn_decl(StmtFnDecl fn_decl, int tab) {
   printf("FUNCTION DECLARATION:\n");
@@ -22,8 +24,6 @@ void inspect_fn_decl(StmtFnDecl fn_decl, int tab) {
   printf("BODY:\n");
   block_stmt_inspect(fn_decl.body, tab + TAB_RATE);
 }
-
-void inspect_expr(StmtExpr expr, int tab);
 
 void inspect_expr_call(ExprCall call, int tab) {
   print_tab(tab);
@@ -65,7 +65,24 @@ void inspect_expr(StmtExpr expr, int tab) {
     print_tab(tab);
     printf("IDENTIIFIER: %s\n", expr.value.ident.label);
     break;
+  case EXPR_BINOP:
+    inspect_expr_binop(expr.value.binop, tab);
+    break;
   }
+}
+
+void inspect_expr_binop(ExprBinOp binop, int tab) {
+  print_tab(tab);
+  printf("BIN OP:\n");
+  tab += TAB_RATE;
+  inspect_expr(*binop.lhs, tab);
+  print_tab(tab);
+  switch (binop.op) {
+  case BINOP_PLUS:
+    printf("+\n");
+    break;
+  }
+  inspect_expr(*binop.rhs, tab);
 }
 
 void block_stmt_inspect(StmtBlock block, int tab) {

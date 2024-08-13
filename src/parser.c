@@ -9,7 +9,8 @@
 
 typedef enum Precedence {
   PRECEDENCE_LOWEST = 1,
-  PRECEDENCE_CALL = 2,
+  PRECEDENCE_ADDITIVE = 2,
+  PRECEDENCE_CALL = 3,
 } Precedence;
 
 static inline void bump(Parser *p);
@@ -21,6 +22,7 @@ StmtBlock parse_stmt_block(Parser *);
 StmtExpr parse_expr(Parser *, Precedence);
 ExprCall parse_expr_call(Parser *, StmtExpr);
 ExprCallArgs parse_expr_call_args(Parser *);
+ExprBinOp parse_expr_binop(Parser *, StmtExpr);
 Precedence token_to_precedence(TokenType);
 
 Parser Parser_New(Lexer lexer) {
@@ -160,6 +162,12 @@ StmtExpr parse_expr(Parser *p, Precedence precedence) {
       lhs = expr;
       break;
     }
+    case TOKEN_PLUS: {
+      StmtExpr expr = {.type = EXPR_BINOP,
+                       .value.binop = parse_expr_binop(p, lhs)};
+      lhs = expr;
+      break;
+    }
     default:
       return lhs;
     }
@@ -197,6 +205,33 @@ ExprCallArgs parse_expr_call_args(Parser *p) {
   return args;
 }
 
+ExprBinOp parse_expr_binop(Parser *p, StmtExpr lhs) {
+  BinOperator op;
+
+  switch (p->curr_token.type) {
+  case TOKEN_PLUS:
+    op = BINOP_PLUS;
+    break;
+  default:
+    fprintf(stderr, "Invalid binop\n");
+    exit(1);
+  }
+  TokenType op_type = p->curr_token.type;
+  bump(p);
+
+  ExprBinOp binop;
+
+  binop.op = op;
+  binop.lhs = malloc(sizeof(ExprBinOp));
+  binop.rhs = malloc(sizeof(ExprBinOp));
+
+  memmove(binop.lhs, &lhs, sizeof(StmtExpr));
+  StmtExpr rhs = parse_expr(p, token_to_precedence(op_type));
+  memmove(binop.rhs, &rhs, sizeof(StmtExpr));
+
+  return binop;
+}
+
 static inline void bump(Parser *p) {
   p->curr_token = p->next_token;
   p->next_token = Lexer_NextToken(&p->lexer);
@@ -215,6 +250,8 @@ Precedence token_to_precedence(TokenType tt) {
   switch (tt) {
   case TOKEN_LPAREN:
     return PRECEDENCE_CALL;
+  case TOKEN_PLUS:
+    return PRECEDENCE_ADDITIVE;
   default:
     return PRECEDENCE_LOWEST;
   }

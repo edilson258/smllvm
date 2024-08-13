@@ -38,6 +38,9 @@ void Token_Inspect(Token *token) {
   case TOKEN_SEMICOLON:
     printf("SYMBOL: ; ");
     break;
+  case TOKEN_PLUS:
+    printf("SYMBOL: + ");
+    break;
   case TOKEN_RETURN:
     printf("KEYWORD: return ");
     break;

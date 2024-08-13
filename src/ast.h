@@ -18,12 +18,15 @@ typedef enum ExprType {
   EXPR_CALL = 1,
   EXPR_IDENT,
   EXPR_LITERAL,
+  EXPR_BINOP,
 } ExprType;
 
 typedef enum ExprLiteralType {
   EXPR_LITERAL_STR = 1,
   EXPR_LITERAL_NUM,
 } ExprLiteralType;
+
+typedef enum BinOperator { BINOP_PLUS = 1 } BinOperator;
 
 /*  Exprs  */
 
@@ -37,6 +40,12 @@ typedef struct ExprCall {
   char *callee;
   ExprCallArgs args;
 } ExprCall;
+
+typedef struct ExprBinOp {
+  struct StmtExpr *lhs;
+  struct StmtExpr *rhs;
+  BinOperator op;
+} ExprBinOp;
 
 typedef struct ExprIdent {
   char *label;
@@ -56,6 +65,7 @@ typedef union ExprValue {
   ExprCall call;
   ExprIdent ident;
   ExprLiteral literal;
+  ExprBinOp binop;
 } ExprValue;
 
 typedef struct StmtExpr {

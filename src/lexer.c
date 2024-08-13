@@ -51,6 +51,10 @@ Token Lexer_NextToken(Lexer *l) {
     read_char(l);
     token.type = TOKEN_SEMICOLON;
     return token;
+  case '+':
+    read_char(l);
+    token.type = TOKEN_PLUS;
+    return token;
   case '-':
     if (is_next_char(l, '>')) {
       read_char(l); // eat '-'

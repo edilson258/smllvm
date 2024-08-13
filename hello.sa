@@ -1,4 +1,4 @@
 function main() -> int {
   print("Hello, world!\n");
-  return 69;
+  return 34 + 35;
 }
