@@ -18,5 +18,5 @@ execute_process(
   OUTPUT_VARIABLE LLVM_LIBS
   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-target_compile_options(sml PRIVATE ${LLVM_CFLAGS})
+target_compile_options(sml PRIVATE ${LLVM_CFLAGS} -ggdb)
 target_link_libraries(sml PRIVATE ${LLVM_LIBS})
