@@ -7,59 +7,32 @@
 #include <llvm-c/Types.h>
 
 #include "llvm_gen.h"
+#include "stdlib.h"
+#include "utils.h"
 
+StdLib *stdlib;
 LLVMModuleRef llvm_module;
 LLVMBuilderRef llvm_builder;
 LLVMContextRef llvm_context;
 
-typedef struct {
-  char *name;
-  char *alias; // eg. 'print' is an alias of 'printf'
-  size_t param_count;
-  Type *param_types;
-  Type return_type;
-} NativeFn;
-
-size_t native_fn_count = 1;
-NativeFn *native_fns;
-
-void setup_native_fns() {
-  NativeFn print;
-  print.alias = "print";
-  print.name = "printf";
-  print.param_count = 1;
-  print.param_types = malloc(sizeof(Type) * 1);
-  print.param_types[0] = TYPE_STR;
-  print.return_type = TYPE_INT;
-
-  native_fns = malloc(sizeof(NativeFn) * native_fn_count);
-  native_fns[0] = print;
-}
-
-NativeFn *find_native_fn(char *alias) {
-  for (size_t i = 0; i < native_fn_count; ++i) {
-    if (strcmp(native_fns[i].alias, alias) == 0) {
-      return &native_fns[i];
-    }
-  }
-  return 0;
-}
-
 LLVMTypeRef sml_to_llvm_type(Type);
-LLVMModuleRef llvm_emit_module(AST);
 void llvm_emit_stmt_block(StmtBlock);
 void llvm_emit_stmt_function(StmtFnDecl);
 LLVMValueRef llvm_emit_stmt_expr(StmtExpr);
 LLVMValueRef llvm_emit_expr_call(ExprCall);
 LLVMValueRef llvm_emit_expr_literal(ExprLiteral);
 
-LLVMModuleRef llvm_emit_module(AST ast) {
+LLVMModuleRef llvm_emit_module(AST ast, char *source_file) {
+  init_std_lib(&stdlib);
   llvm_module = LLVMModuleCreateWithName("hello");
   llvm_context = LLVMContextCreate();
   llvm_builder = LLVMCreateBuilderInContext(llvm_context);
-  setup_native_fns();
+
+  LLVMSetSourceFileName(llvm_module, source_file, strlen(source_file));
 
   llvm_emit_stmt_block(ast);
+
+  LLVMDisposeBuilder(llvm_builder);
 
   return llvm_module;
 }
@@ -117,44 +90,40 @@ LLVMValueRef llvm_emit_stmt_expr(StmtExpr expr) {
 }
 
 LLVMValueRef llvm_emit_expr_call(ExprCall call) {
-  NativeFn *fn = find_native_fn(call.callee);
+  BuiltinFn *fn = find_builtin_fn(stdlib, call.callee);
 
   assert(fn && "Calling non-defined function\n");
-  assert(fn->param_count == call.args.argc && "Args count miss match\n");
+  assert(fn->prototype.param_count == call.args.argc &&
+         "Args count miss match\n");
 
-  LLVMValueRef val;
+  LLVMTypeRef return_type = sml_to_llvm_type(fn->prototype.return_type);
 
-  LLVMTypeRef return_type = sml_to_llvm_type(fn->return_type);
-  LLVMTypeRef params[fn->param_count];
-
-  for (size_t i = 0; i < fn->param_count; ++i) {
-    params[i] = sml_to_llvm_type(fn->param_types[i]);
+  LLVMTypeRef params[fn->prototype.param_count];
+  for (size_t i = 0; i < fn->prototype.param_count; ++i) {
+    params[i] = sml_to_llvm_type(fn->prototype.param_types[i]);
   }
 
   LLVMTypeRef fn_type =
-      LLVMFunctionType(return_type, params, fn->param_count, 1);
-  val = LLVMAddFunction(llvm_module, fn->name, fn_type);
+      LLVMFunctionType(return_type, params, fn->prototype.param_count, 1);
+  LLVMValueRef val = LLVMAddFunction(llvm_module, fn->prototype.name, fn_type);
 
-  LLVMValueRef args[fn->param_count];
-
-  for (size_t i = 0; i < fn->param_count; ++i) {
+  LLVMValueRef args[call.args.argc];
+  for (size_t i = 0; i < call.args.argc; ++i) {
     args[i] = llvm_emit_stmt_expr(call.args.argv[i]);
   }
 
-  val = LLVMBuildCall2(llvm_builder, fn_type, val, args, fn->param_count, "");
-
+  val = LLVMBuildCall2(llvm_builder, fn_type, val, args, call.args.argc, "");
   return val;
 }
 
 LLVMValueRef llvm_emit_expr_literal(ExprLiteral literal) {
-  LLVMValueRef val;
   switch (literal.type) {
   case EXPR_LITERAL_NUM:
-    val = LLVMConstInt(LLVMInt32Type(), literal.value.number, 0);
-    return val;
-  case EXPR_LITERAL_STR:
-    val = LLVMBuildGlobalString(llvm_builder, literal.value.string, "str");
-    return val;
+    return LLVMConstInt(LLVMInt32Type(), literal.value.number, 0);
+  case EXPR_LITERAL_STR: {
+    char *unescaped_str = unescape_str(literal.value.string);
+    return LLVMBuildGlobalStringPtr(llvm_builder, unescaped_str, "str");
+  }
   }
 }
 

@@ -5,6 +5,6 @@
 
 #include "ast.h"
 
-LLVMModuleRef llvm_emit_module(AST);
+LLVMModuleRef llvm_emit_module(AST ast, char *source_file);
 
 #endif
