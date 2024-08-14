@@ -1,106 +1,153 @@
 #include <stdio.h>
 
 #include "ast.h"
+#include "type.h"
 
-#define TAB_RATE 4
+typedef struct InspectContext {
+  FILE *file;
+  int tab;
+  int tab_rate;
+} InspectContext;
 
-void print_tab(int x) {
-  for (int i = 0; i <= x; ++i) {
-    printf(" ");
-  }
+void inspect_write(InspectContext *ctx, char *text, ...);
+void inspect_writeln(InspectContext *ctx, char *text, ...);
+
+void AST_Inspect(AST ast);
+void insect_stmt_block(InspectContext *, StmtBlock);
+void insect_stmt_vardecl(InspectContext *, StmtVarDecl);
+void insect_stmt_function(InspectContext *, StmtFnDecl);
+void insect_stmt_return(InspectContext *, StmtReturn);
+void insect_stmt_expr(InspectContext *, StmtExpr);
+void inspect_expr_literal(InspectContext *, ExprLiteral);
+void inspect_expr_call(InspectContext *, ExprCall);
+void inspect_expr_binop(InspectContext *, ExprBinOp);
+
+void AST_Inspect(AST ast) {
+  InspectContext ctx;
+  ctx.file = stdout;
+  ctx.tab = 0;
+  ctx.tab_rate = 4;
+
+  insect_stmt_block(&ctx, ast);
 }
 
-void inspect_expr(StmtExpr expr, int tab);
-void block_stmt_inspect(StmtBlock block, int tab);
-void inspect_expr_binop(ExprBinOp binop, int tab);
-
-void inspect_fn_decl(StmtFnDecl fn_decl, int tab) {
-  printf("FUNCTION DECLARATION:\n");
-  print_tab(tab);
-  printf("NAME: '%s'\n", fn_decl.name);
-  print_tab(tab);
-  printf("RETURN TYPE: %s\n", TYPE(fn_decl.return_type));
-  print_tab(tab);
-  printf("BODY:\n");
-  block_stmt_inspect(fn_decl.body, tab + TAB_RATE);
-}
-
-void inspect_expr_call(ExprCall call, int tab) {
-  print_tab(tab);
-  printf("CALL EXPR:\n");
-  tab += TAB_RATE;
-  print_tab(tab);
-  printf("CALLEE: '%s'\n", call.callee);
-  print_tab(tab);
-  printf("ARGS: [\n");
-  for (int i = 0; i < call.args.argc; ++i) {
-    inspect_expr(call.args.argv[i], tab + TAB_RATE);
-  }
-  print_tab(tab);
-  printf("]\n");
-}
-
-void inspect_literal(ExprLiteral literal, int tab) {
-  switch (literal.type) {
-  case EXPR_LITERAL_NUM:
-    print_tab(tab);
-    printf("LITERAL: %lld\n", literal.value.number);
-    break;
-  case EXPR_LITERAL_STR:
-    print_tab(tab);
-    printf("LITERAL: '%s'\n", literal.value.string);
-    break;
-  }
-}
-
-void inspect_expr(StmtExpr expr, int tab) {
-  switch (expr.type) {
-  case EXPR_CALL:
-    inspect_expr_call(expr.value.call, tab);
-    break;
-  case EXPR_LITERAL:
-    inspect_literal(expr.value.literal, tab);
-    break;
-  case EXPR_IDENT:
-    print_tab(tab);
-    printf("IDENTIIFIER: %s\n", expr.value.ident.label);
-    break;
-  case EXPR_BINOP:
-    inspect_expr_binop(expr.value.binop, tab);
-    break;
-  }
-}
-
-void inspect_expr_binop(ExprBinOp binop, int tab) {
-  print_tab(tab);
-  printf("BIN OP:\n");
-  tab += TAB_RATE;
-  inspect_expr(*binop.lhs, tab);
-  print_tab(tab);
-  switch (binop.op) {
-  case BINOP_PLUS:
-    printf("+\n");
-    break;
-  }
-  inspect_expr(*binop.rhs, tab);
-}
-
-void block_stmt_inspect(StmtBlock block, int tab) {
+void insect_stmt_block(InspectContext *ctx, StmtBlock block) {
   for (size_t i = 0; i < block.stmt_count; ++i) {
-    switch (block.stmts[i].type) {
-    case STMT_EXPR:
-      inspect_expr(block.stmts[i].value.expr, tab);
+    Stmt stmt = block.stmts[i];
+    switch (stmt.type) {
+    case STMT_VAR_DECL:
+      insect_stmt_vardecl(ctx, stmt.value.var_decl);
       break;
     case STMT_FN_DECL:
-      inspect_fn_decl(block.stmts[i].value.fn_decl, tab);
+      insect_stmt_function(ctx, stmt.value.fn_decl);
+      break;
+    case STMT_EXPR:
+      insect_stmt_expr(ctx, stmt.value.expr);
       break;
     case STMT_RETURN:
-      print_tab(tab);
-      printf("RETURN:\n");
-      inspect_expr(block.stmts[i].value.return_.operand, tab + TAB_RATE);
+      insect_stmt_return(ctx, stmt.value.return_);
       break;
     }
   }
 }
 
-void AST_Inspect(AST ast) { block_stmt_inspect(ast, TAB_RATE); }
+void insect_stmt_vardecl(InspectContext *ctx, StmtVarDecl var_decl) {
+  inspect_writeln(ctx, "VARIABLE DECLARATION:");
+  ctx->tab += ctx->tab_rate;
+  inspect_writeln(ctx, "NAME: \"%s\"", var_decl.name);
+  inspect_write(ctx, "INIT:\n");
+  ctx->tab += ctx->tab_rate;
+  insect_stmt_expr(ctx, *var_decl.init);
+  ctx->tab -= (ctx->tab_rate * 2);
+}
+
+void insect_stmt_function(InspectContext *ctx, StmtFnDecl fn) {
+  inspect_writeln(ctx, "FUNCTION DECLARATION:");
+  ctx->tab += ctx->tab_rate;
+  inspect_writeln(ctx, "NAME: \"%s\"", fn.name);
+  inspect_writeln(ctx, "RETURN TYPE: %s", TYPE(fn.return_type));
+  inspect_writeln(ctx, "BODY:");
+  ctx->tab += ctx->tab_rate;
+  insect_stmt_block(ctx, fn.body);
+  ctx->tab -= (ctx->tab_rate * 2);
+}
+
+void insect_stmt_return(InspectContext *ctx, StmtReturn ret) {
+  inspect_writeln(ctx, "RETURN STATEMENT:");
+  ctx->tab += ctx->tab_rate;
+  insect_stmt_expr(ctx, ret.operand);
+  ctx->tab -= ctx->tab_rate;
+}
+
+void insect_stmt_expr(InspectContext *ctx, StmtExpr expr) {
+  switch (expr.type) {
+  case EXPR_LITERAL:
+    inspect_expr_literal(ctx, expr.value.literal);
+    break;
+  case EXPR_CALL:
+    inspect_expr_call(ctx, expr.value.call);
+    break;
+  case EXPR_BINOP:
+    inspect_expr_binop(ctx, expr.value.binop);
+  }
+}
+
+void inspect_expr_literal(InspectContext *ctx, ExprLiteral literal) {
+  switch (literal.type) {
+  case EXPR_LITERAL_NUM:
+    inspect_writeln(ctx, "LITERAL(%lld)", literal.value.number);
+    break;
+  case EXPR_LITERAL_STR:
+    inspect_writeln(ctx, "LITERAL(\"%s\")", literal.value.string);
+    break;
+  }
+}
+
+void inspect_expr_call(InspectContext *ctx, ExprCall call) {
+  inspect_writeln(ctx, "FUNCTION CALL:");
+  ctx->tab += ctx->tab_rate;
+  inspect_writeln(ctx, "NAME: \"%s\"", call.callee);
+
+  inspect_writeln(ctx, "ARGS: [");
+  ctx->tab += ctx->tab_rate;
+  for (size_t i = 0; i < call.args.argc; ++i) {
+    insect_stmt_expr(ctx, call.args.argv[i]);
+  }
+  ctx->tab -= ctx->tab_rate;
+  inspect_writeln(ctx, "]");
+  ctx->tab -= ctx->tab_rate;
+}
+
+void inspect_expr_binop(InspectContext *ctx, ExprBinOp binop) {
+  inspect_writeln(ctx, "BINARY EXPRESSION:");
+  ctx->tab += ctx->tab_rate;
+  insect_stmt_expr(ctx, *binop.lhs);
+  switch (binop.op) {
+  case BINOP_PLUS:
+    inspect_writeln(ctx, "+");
+    break;
+  }
+  insect_stmt_expr(ctx, *binop.rhs);
+  ctx->tab -= ctx->tab_rate;
+}
+
+void inspect_writeln(InspectContext *ctx, char *f, ...) {
+  for (int i = 0; i < ctx->tab; ++i) {
+    fprintf(ctx->file, " ");
+  }
+  va_list args;
+  va_start(args, f);
+  vfprintf(ctx->file, f, args);
+  va_end(args);
+  fprintf(ctx->file, "\n");
+}
+
+void inspect_write(InspectContext *ctx, char *f, ...) {
+  for (int i = 0; i < ctx->tab; ++i) {
+    fprintf(ctx->file, " ");
+  }
+  va_list args;
+  va_start(args, f);
+  vfprintf(ctx->file, f, args);
+  va_end(args);
+}
