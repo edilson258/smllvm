@@ -11,6 +11,7 @@
 #include "lexer.h"
 #include "llvm_gen.h"
 #include "parser.h"
+#include "type_check.h"
 #include "utils.h"
 
 void print_usage();
@@ -28,8 +29,10 @@ int main(int argc, char *argv[]) {
   Lexer lexer = Lexer_New(read_file(source_file));
   Parser parser = Parser_New(lexer);
   StmtBlock ast = Parse(&parser);
-  AST_Inspect(ast);
 
+  AST_type_check(&ast);
+
+  AST_Inspect(ast);
   LLVMModuleRef module = llvm_emit_module(ast, source_file);
   LLVMPrintModuleToFile(module, change_file_ext(source_file, ".ll"), 0);
 

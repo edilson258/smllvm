@@ -41,11 +41,17 @@ void Token_Inspect(Token *token) {
   case TOKEN_PLUS:
     printf("SYMBOL: + ");
     break;
+  case TOKEN_EQUAL:
+    printf("SYMBOL: = ");
+    break;
   case TOKEN_RETURN:
     printf("KEYWORD: return ");
     break;
   case TOKEN_TYPE_INT:
     printf("KEYWORD: int ");
+    break;
+  case TOKEN_LET:
+    printf("KEYWORD: let ");
     break;
   }
 

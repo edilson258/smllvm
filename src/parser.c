@@ -17,6 +17,7 @@ static inline void bump(Parser *p);
 static inline void bump_expexted(Parser *p, TokenType);
 Stmt parse_stmt(Parser *);
 StmtFnDecl parse_stmt_fndecl(Parser *);
+StmtVarDecl parse_stmt_vardecl(Parser *);
 StmtReturn parse_stmt_return(Parser *);
 StmtBlock parse_stmt_block(Parser *);
 StmtExpr parse_expr(Parser *, Precedence);
@@ -52,6 +53,11 @@ Stmt parse_stmt(Parser *p) {
   switch (p->curr_token.type) {
   case TOKEN_FN_DECL: {
     Stmt stmt = {.type = STMT_FN_DECL, .value.fn_decl = parse_stmt_fndecl(p)};
+    return stmt;
+  }
+  case TOKEN_LET: {
+    Stmt stmt = {.type = STMT_VAR_DECL,
+                 .value.var_decl = parse_stmt_vardecl(p)};
     return stmt;
   }
   case TOKEN_RETURN: {
@@ -129,6 +135,35 @@ StmtReturn parse_stmt_return(Parser *p) {
   return stmt_ret;
 }
 
+StmtVarDecl parse_stmt_vardecl(Parser *p) {
+  bump(p);
+
+  if (p->curr_token.type != TOKEN_IDENT) {
+    fprintf(stderr, "'let' must follow an idenifier\n");
+    exit(1);
+  }
+
+  StmtVarDecl var_decl;
+  // variable type is unknown yet and will be determined at analysis step
+  var_decl.type = 0;
+  var_decl.name = p->curr_token.value.string;
+  bump(p);
+
+  if (p->curr_token.type != TOKEN_EQUAL) {
+    fprintf(stderr, "Missing init val for %s\n", var_decl.name);
+  }
+
+  bump(p);
+
+  var_decl.init = malloc(sizeof(StmtExpr));
+  StmtExpr init = parse_expr(p, PRECEDENCE_LOWEST);
+  memmove(var_decl.init, &init, sizeof(StmtExpr));
+
+  bump_expexted(p, TOKEN_SEMICOLON);
+
+  return var_decl;
+}
+
 StmtExpr parse_expr(Parser *p, Precedence precedence) {
   StmtExpr lhs;
   switch (p->curr_token.type) {
@@ -182,7 +217,7 @@ ExprCall parse_expr_call(Parser *p, StmtExpr lhs) {
     exit(1);
   }
   ExprCallArgs args = parse_expr_call_args(p);
-  ExprCall call = {.callee = lhs.value.ident.label, .args = args};
+  ExprCall call = {.name = lhs.value.ident.label, .args = args};
   return call;
 }
 

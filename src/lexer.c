@@ -55,6 +55,10 @@ Token Lexer_NextToken(Lexer *l) {
     read_char(l);
     token.type = TOKEN_PLUS;
     return token;
+  case '=':
+    read_char(l);
+    token.type = TOKEN_EQUAL;
+    return token;
   case '-':
     if (is_next_char(l, '>')) {
       read_char(l); // eat '-'
@@ -81,6 +85,8 @@ Token Lexer_NextToken(Lexer *l) {
       token.type = TOKEN_TYPE_INT;
     } else if (strcmp(label, "return") == 0) {
       token.type = TOKEN_RETURN;
+    } else if (strcmp(label, "let") == 0) {
+      token.type = TOKEN_LET;
     } else {
       token.type = TOKEN_IDENT;
       token.value.string = label;

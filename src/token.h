@@ -22,11 +22,13 @@ typedef enum {
   TOKEN_RBRACE,
   TOKEN_SEMICOLON,
   TOKEN_PLUS,
+  TOKEN_EQUAL,
 
   // keywords
   TOKEN_RETURN,
   TOKEN_FN_DECL,
   TOKEN_TYPE_INT,
+  TOKEN_LET,
 } TokenType;
 
 typedef struct {

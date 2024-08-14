@@ -55,6 +55,7 @@ void insect_stmt_vardecl(InspectContext *ctx, StmtVarDecl var_decl) {
   inspect_writeln(ctx, "VARIABLE DECLARATION:");
   ctx->tab += ctx->tab_rate;
   inspect_writeln(ctx, "NAME: \"%s\"", var_decl.name);
+  inspect_writeln(ctx, "TYPE: %s", TYPE(var_decl.type));
   inspect_write(ctx, "INIT:\n");
   ctx->tab += ctx->tab_rate;
   insect_stmt_expr(ctx, *var_decl.init);
@@ -89,6 +90,10 @@ void insect_stmt_expr(InspectContext *ctx, StmtExpr expr) {
     break;
   case EXPR_BINOP:
     inspect_expr_binop(ctx, expr.value.binop);
+    break;
+  case EXPR_IDENT:
+    puts("[WARNING] couldn't inspect EXPR_IDENT");
+    break;
   }
 }
 
@@ -106,7 +111,7 @@ void inspect_expr_literal(InspectContext *ctx, ExprLiteral literal) {
 void inspect_expr_call(InspectContext *ctx, ExprCall call) {
   inspect_writeln(ctx, "FUNCTION CALL:");
   ctx->tab += ctx->tab_rate;
-  inspect_writeln(ctx, "NAME: \"%s\"", call.callee);
+  inspect_writeln(ctx, "NAME: \"%s\"", call.name);
 
   inspect_writeln(ctx, "ARGS: [");
   ctx->tab += ctx->tab_rate;

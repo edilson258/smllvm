@@ -5,7 +5,7 @@
 
 typedef enum {
   TYPE_INT = 1,
-  TYPE_STR,
+  TYPE_STR = 2,
 } Type;
 
 #define TYPE(t)                                                                \

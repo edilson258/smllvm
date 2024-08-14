@@ -12,6 +12,7 @@ typedef enum StmtType {
   STMT_FN_DECL = 1,
   STMT_RETURN,
   STMT_EXPR,
+  STMT_VAR_DECL,
 } StmtType;
 
 typedef enum ExprType {
@@ -37,7 +38,7 @@ typedef struct ExprCallArgs {
 } ExprCallArgs;
 
 typedef struct ExprCall {
-  char *callee;
+  char *name;
   ExprCallArgs args;
 } ExprCall;
 
@@ -91,10 +92,17 @@ typedef struct StmtFnDecl {
   Type return_type;
 } StmtFnDecl;
 
+typedef struct StmtVarDecl {
+  char *name;
+  StmtExpr *init;
+  Type type;
+} StmtVarDecl;
+
 typedef union StmtValue {
   StmtExpr expr;
   StmtFnDecl fn_decl;
   StmtReturn return_;
+  StmtVarDecl var_decl;
 } StmtValue;
 
 typedef struct Stmt {
